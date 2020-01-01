@@ -1,31 +1,56 @@
-endpoint = 'https://portal.gdc.cancer.gov/auth/api/cases'
-verb = 'POST'
-headers = {
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Content-Type': 'application/x-www-form-urlencoded'
-}
+import requests
+import json
+import os
+import sys
+from pathlib import Path
 
-formData = {
-    'size': 3,
-    'attachment': 'true',
-    'format': 'JSON',
-    'fields': 'case_id',
-    'filters': {
-        "op": "and",
-        "content": [{
-            "op": "in",
-            "content": {
-                "field": "cases.case_id",
-                "value": ["4abbd258-0f0c-4428-901d-625d47ad363a","a8def1a0-a136-47f4-9ad9-60ebcf9b726b","53245616-e095-4616-89bb-6062669122da"]
-            }
-        }]
-    },
-    'pretty': 'true',
-    'expand': 'demographic,diagnoses, diagnoses.treatments,exposures,family_histories,follow_ups,follow_ups.molecular_tests',
-    'filename': 'clinical.cases_selection.json'
-    'downloadCookieKey': '44a06c7ee',
-    'downloadCookiePath': '/'
-}
-formString = 'size=3&attachment=true&format=JSON&fields=case_id&filters=%7B%22op%22%3A%22and%22%2C%22content%22%3A%5B%7B%22op%22%3A%22in%22%2C%22content%22%3A%7B%22field%22%3A%22cases.case_id%22%2C%22value%22%3A%5B%224abbd258-0f0c-4428-901d-625d47ad363a%22%2C%22a8def1a0-a136-47f4-9ad9-60ebcf9b726b%22%2C%2253245616-e095-4616-89bb-6062669122da%22%5D%7D%7D%5D%7D&pretty=true&expand=demographic%2Cdiagnoses%2Cdiagnoses.treatments%2Cexposures%2Cfamily_histories%2Cfollow_ups%2Cfollow_ups.molecular_tests&filename=clinical.cases_selection.2019-12-27.json&downloadCookieKey=44a06c7ee&downloadCookiePath=%2F'
+SAVE_PATH = 'data'
+SAVE_FILENAME = 'case_studies.json'
+SAVE_FILE_LOCATION = f'{SAVE_PATH}/{SAVE_FILENAME}'
 
-# Next steps: 1) get Url calls to query all available case ids. 2) write call to see how many cases you can get data for at once 3) download!!
+def get_data():
+    sort = 'case_id'
+    expand_fields = 'demographic,diagnoses,diagnoses.treatments,exposures,family_histories,follow_ups,follow_ups.molecular_tests'
+    page_size = '1000'
+    page_start = '0'
+
+    results = []
+    retry = 0
+
+    while True:
+        response = requests.get(f'https://api.gdc.cancer.gov/cases?sort={sort}&expand={expand_fields}&size={page_size}&from={page_start}')
+        if response.status_code == 200:
+            retry = 0
+            data = response.json()
+
+            results += data['data']['hits']
+
+            pagination = data['data']['pagination']
+            if pagination['page'] >= pagination['pages']:
+                #reached the last page, got all data
+                break
+
+            page_start += page_size
+
+        elif retry < 3:
+            retry += 1
+        else:
+            # Couldn't proceed even with retrying api calls
+            break
+
+    return results
+
+def save_data(results):
+    # don't feel like littering with .gitkeep
+    Path(SAVE_PATH).mkdir(parents=True, exist_ok=True)
+    with open(SAVE_FILE_LOCATION, 'w') as results_file:
+        json.dump(results, results_file)
+
+def gather_data(overwrite = False):
+    if overwrite or not os.path.exists(SAVE_FILE_LOCATION):
+        save_data(get_data())
+
+
+if __name__ == '__main__':
+    overwrite = None if len(sys.argv) == 1 else sys.argv[1]
+    gather_data(overwrite)
