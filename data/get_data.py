@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-SAVE_PATH = 'data'
+SAVE_PATH = os.path.dirname(__file__)
 SAVE_FILENAME = 'case_studies.json'
 SAVE_FILE_LOCATION = f'{SAVE_PATH}/{SAVE_FILENAME}'
 
@@ -41,8 +41,6 @@ def get_data():
     return results
 
 def save_data(results):
-    # don't feel like littering with .gitkeep
-    Path(SAVE_PATH).mkdir(parents=True, exist_ok=True)
     with open(SAVE_FILE_LOCATION, 'w') as results_file:
         json.dump(results, results_file)
 
