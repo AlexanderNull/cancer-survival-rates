@@ -11,11 +11,13 @@ SAVE_FILE_LOCATION = f'{SAVE_PATH}/{SAVE_FILENAME}'
 def get_data():
     sort = 'case_id'
     expand_fields = 'demographic,diagnoses,diagnoses.treatments,exposures,family_histories,follow_ups,follow_ups.molecular_tests'
-    page_size = '1000'
-    page_start = '0'
+    page_size = 1000
+    page_start = 0
 
     results = []
     retry = 0
+
+    print('Retrieving case studies from gdc.cancer.gov')
 
     while True:
         response = requests.get(f'https://api.gdc.cancer.gov/cases?sort={sort}&expand={expand_fields}&size={page_size}&from={page_start}')
@@ -23,10 +25,12 @@ def get_data():
             retry = 0
             data = response.json()
 
-            results += data['data']['hits']
+            hits = data['data']['hits']
+            results += hits
 
             pagination = data['data']['pagination']
             if pagination['page'] >= pagination['pages']:
+                print(f'Reached the end at page {pagination["page"]}')
                 #reached the last page, got all data
                 break
 
@@ -38,6 +42,7 @@ def get_data():
             # Couldn't proceed even with retrying api calls
             break
 
+    print(f'Retrieved a total of {len(results)} results')
     return results
 
 def save_data(results):
