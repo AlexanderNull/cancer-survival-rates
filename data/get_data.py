@@ -4,7 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-SAVE_PATH = os.path.dirname(__file__)
+SAVE_PATH = f"{os.path.dirname(__file__)}/raw"
 SAVE_FILENAME = 'case_studies.json'
 SAVE_FILE_LOCATION = f'{SAVE_PATH}/{SAVE_FILENAME}'
 
